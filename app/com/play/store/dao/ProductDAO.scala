@@ -1,12 +1,11 @@
 package com.play.store.dao
 
 import com.google.inject.ImplementedBy
-import com.play.store.errors.Errors.CantReserveProductError
 import javax.inject._
 import play.api.db.slick.DatabaseConfigProvider
-import slick.dbio.{DBIO, DBIOAction}
+import slick.dbio.DBIO
 import scala.concurrent.ExecutionContext
-import com.play.store.models.{Id, Product, ProductDTO}
+import com.play.store.models.Product
 
 
 @ImplementedBy(classOf[ProductDAOImpl])

@@ -1,21 +1,18 @@
 package com.play.store.services
 
-import java.util.UUID
 import akka.actor.ActorRef
 import com.google.inject.ImplementedBy
-import com.play.store.actors.PlayStoreActor.AvailableProducts
+import com.play.store.actors.PlayStoreActor.{AvailableProducts, ReserveProduct}
 import com.play.store.dao.ProductDAO
-import com.play.store.errors.Errors.{CurrencyNotSupportedError, ProductNotAvailableError}
+import com.play.store.errors.Errors.{CurrencyNotSupportedError, SuperStoreError}
 import com.play.store.models.Currency.Currency
-import com.play.store.models.{Currency, Id, Money, Product}
+import com.play.store.models._
 import javax.inject.{Inject, Named}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.dbio.DBIOAction
 import slick.jdbc.JdbcProfile
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
-
 import akka.pattern.ask
 import akka.util.Timeout
 
@@ -24,7 +21,7 @@ trait StoreService {
 
   def getAllAvailableProducts(currency: Option[String]): Future[Seq[Product]]
 
-  def reserveProduct(productId: Id[Product]): Future[String]
+  def reserveProduct(productId: Id[Product]): Future[ReservationOrder]
 
 }
 
@@ -50,9 +47,10 @@ class StoreServiceImpl @Inject()(
   }
 
   override def reserveProduct(productId: Id[Product]) = {
-
-    UUID.randomUUID().toString
-    ???
+    (playStoreActor ? ReserveProduct(productId)).mapTo[Either[SuperStoreError, ReservationOrder]].flatMap {
+      case Right(reservation) => Future.successful(reservation)
+      case Left(error) => Future.failed(error)
+    }
   }
 
   private def calculateNewPrices(products: Seq[Product], newCurrency: Currency) = {
