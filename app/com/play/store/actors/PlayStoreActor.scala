@@ -38,6 +38,7 @@ class PlayStoreActor @Inject()(productService: ProductService) extends Actor {
     logger.info(s"Expiring reservation for product ${id.toString}")
     val product = currentProducts(id)
     currentProducts += (product.id -> product.copy(quantity = product.quantity + 1))
+    sender() ! (())
   }
 
   private def loadProducts() = {
