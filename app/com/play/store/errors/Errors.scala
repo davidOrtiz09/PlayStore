@@ -26,5 +26,10 @@ object Errors {
     1004
   )
 
+  case class CantBuyProductError(reservationCode: String) extends SuperStoreError(
+    s"Reservation $reservationCode couldn't be completed because expired",
+    1005
+  )
+
 
 }

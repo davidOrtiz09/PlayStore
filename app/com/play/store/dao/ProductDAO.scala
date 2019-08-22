@@ -23,7 +23,6 @@ class ProductDAOImpl @Inject()(
 
   override def getAllAvailable() = {
     productQuery
-      .filter(_.quantity > 0)
       .result
       .map(_.map(Product.fromDB))
   }

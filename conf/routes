@@ -4,6 +4,8 @@
 # ~~~~
 
 GET     /products                    com.play.store.controllers.AsyncController.getAllAvailableProducts(currency : Option[String])
+POST    /products/reserve            com.play.store.controllers.AsyncController.reserveProduct()
+POST    /products/buy                com.play.store.controllers.AsyncController.buyProduct()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

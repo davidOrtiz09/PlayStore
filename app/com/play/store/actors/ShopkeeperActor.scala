@@ -23,9 +23,13 @@ class ShopkeeperActor(productId: Id[Product]) extends Actor with ActorLogging {
   def receive: Receive = {
     case StartTimer => startTime()
     case CancelOrder => cancelOrder()
-    case FinishReservation =>
-      log.info(s"Reservation for product ${productId.toString} has been completed")
-      self ! PoisonPill
+    case FinishReservation => finishReservation()
+  }
+
+  private def finishReservation() = {
+    log.info(s"Reservation for product ${productId.toString} has been completed")
+    self ! PoisonPill
+    sender() ! productId
   }
 
   private def cancelOrder() = {

@@ -1,10 +1,10 @@
 package com.play.store.services
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.ImplementedBy
 import com.play.store.actors.PlayStoreActor.{AvailableProducts, ReserveProduct}
 import com.play.store.dao.ProductDAO
-import com.play.store.errors.Errors.{CurrencyNotSupportedError, SuperStoreError}
+import com.play.store.errors.Errors.{CantBuyProductError, CurrencyNotSupportedError, SuperStoreError}
 import com.play.store.models.Currency.Currency
 import com.play.store.models._
 import javax.inject.{Inject, Named}
@@ -15,6 +15,7 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
+import com.play.store.actors.ShopkeeperActor.FinishReservation
 
 @ImplementedBy(classOf[StoreServiceImpl])
 trait StoreService {
@@ -23,9 +24,12 @@ trait StoreService {
 
   def reserveProduct(productId: Id[Product]): Future[ReservationOrder]
 
+  def buyProduct(order: ReservationOrder) : Future[Id[Product]]
+
 }
 
 class StoreServiceImpl @Inject()(
+  actorSystem: ActorSystem,
   productDAO: ProductDAO,
   exchangeService: ExchangeService,
   @Named("play-store-actor") playStoreActor: ActorRef,
@@ -42,7 +46,7 @@ class StoreServiceImpl @Inject()(
         products <- (playStoreActor ? AvailableProducts).mapTo[Seq[Product]]
         newProducts <- calculateNewPrices(products, newCurrency)
       } yield newProducts
-      case None => db.run(productDAO.getAllAvailable())
+      case None => (playStoreActor ? AvailableProducts).mapTo[Seq[Product]]
     }
   }
 
@@ -50,6 +54,14 @@ class StoreServiceImpl @Inject()(
     (playStoreActor ? ReserveProduct(productId)).mapTo[Either[SuperStoreError, ReservationOrder]].flatMap {
       case Right(reservation) => Future.successful(reservation)
       case Left(error) => Future.failed(error)
+    }
+  }
+
+  override def buyProduct(order: ReservationOrder) = {
+    actorSystem.actorSelection(s"/user/${playStoreActor.path.name}/${order.code}").resolveOne().flatMap { ref =>
+      (ref ? FinishReservation).mapTo[Id[Product]]
+    }.recoverWith {
+      case _: Exception => Future.failed(CantBuyProductError(order.code))
     }
   }
 
