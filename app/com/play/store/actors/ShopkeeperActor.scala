@@ -1,6 +1,7 @@
 package com.play.store.actors
 
 import akka.actor.{Actor, ActorLogging, PoisonPill, Props}
+import akka.event.Logging
 import com.play.store.actors.PlayStoreActor.DeleteReservation
 import com.play.store.actors.ShopkeeperActor.{CancelOrder, FinishReservation, StartTimer}
 import com.play.store.models.{Id, Product}
@@ -14,7 +15,8 @@ object ShopkeeperActor {
 
   def props(productId: Id[Product]) = Props(new ShopkeeperActor(productId))
 }
-class ShopkeeperActor(productId: Id[Product]) extends Actor with ActorLogging {
+class ShopkeeperActor(productId: Id[Product]) extends Actor {
+  private val logger = Logging(context.system, this)
   private val ttl = 30.seconds
   private val reservationCode = self.path.name
 
@@ -27,24 +29,24 @@ class ShopkeeperActor(productId: Id[Product]) extends Actor with ActorLogging {
   }
 
   private def finishReservation() = {
-    log.info(s"Reservation for product ${productId.toString} has been completed")
+    logger.info(s"Reservation for product ${productId.toString} has been completed")
     self ! PoisonPill
     sender() ! productId
   }
 
   private def cancelOrder() = {
-    log.info(s"Shopkeeper $reservationCode is cancelling order for product ${productId.toString} because ttl has been completed")
+    logger.info(s"Shopkeeper $reservationCode is cancelling order for product ${productId.toString} because ttl has been completed")
     context.parent ! DeleteReservation(productId)
     self ! PoisonPill
   }
 
   private def startTime() = {
-    log.info(s"Shopkeeper's $reservationCode timer started at $ttl seconds")
+    logger.info(s"Shopkeeper's $reservationCode timer started at $ttl seconds")
     context.system.scheduler.scheduleOnce(ttl, self, CancelOrder)
   }
 
   override def preStart(): Unit = {
-    log.info(s"Shopkeeper $reservationCode is alive")
+    logger.info(s"Shopkeeper $reservationCode is alive")
     self ! StartTimer
   }
 

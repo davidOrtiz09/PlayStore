@@ -1,16 +1,15 @@
 package com.play.store.actors
 
 import java.util.UUID
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.Actor
+import akka.event.Logging
 import com.play.store.actors.PlayStoreActor.{AvailableProducts, DeleteReservation, LoadProducts, ReserveProduct}
-import com.play.store.dao.ProductDAO
 import com.play.store.errors.Errors.{CantReserveProductError, ProductNotAvailableError}
-import javax.inject.Inject
-import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.jdbc.JdbcProfile
-import com.play.store.models.{Id, Product, ReservationOrder}
+import javax.inject.{Inject, Singleton}
+import com.play.store.models._
+import com.play.store.services.ProductService
 import scala.collection.mutable
-import scala.collection.mutable.Map
+import scala.util.{Failure, Success}
 
 object PlayStoreActor {
   case class ReserveProduct(id: Id[Product])
@@ -20,12 +19,12 @@ object PlayStoreActor {
 
 }
 
-class PlayStoreActor @Inject()(
-  productDAO: ProductDAO,
-  protected val dbConfigProvider: DatabaseConfigProvider) extends Actor with ActorLogging with HasDatabaseConfigProvider[JdbcProfile] {
+@Singleton
+class PlayStoreActor @Inject()(productService: ProductService) extends Actor {
 
   import context.dispatcher
 
+  private val logger = Logging(context.system, this)
   private var currentProducts: mutable.Map[Id[Product], Product] = mutable.Map.empty[Id[Product], Product]
 
   def receive = {
@@ -36,15 +35,17 @@ class PlayStoreActor @Inject()(
   }
 
   private def deleteReservation(id: Id[Product]) = {
-    log.info(s"Expiring reservation for product ${id.toString}")
+    logger.info(s"Expiring reservation for product ${id.toString}")
     val product = currentProducts(id)
     currentProducts += (product.id -> product.copy(quantity = product.quantity + 1))
   }
 
   private def loadProducts() = {
-    db.run(productDAO.getAllAvailable())
-      .foreach {products =>
+    val sen = sender()
+    productService.loadAllProducts()
+      .map {products =>
         currentProducts = mutable.Map(products.map(p => p.id -> p): _*)
+        sen ! (())
       }
   }
 
@@ -64,7 +65,6 @@ class PlayStoreActor @Inject()(
     }
     sender() ! result
   }
-
 
   override def preStart(): Unit = {
     self ! LoadProducts
