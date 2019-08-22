@@ -1,5 +1,5 @@
 ## Play Store
-Store simulator using Akka actors
+Store simulator using Akka actors using COP as base currency
 
 ## Libraries
 
@@ -31,8 +31,10 @@ Store simulator using Akka actors
 
  To start the app just digit sbt run in the project directory, the app will run in 0.0.0.0:9000
 
-    - First, look for all the products in the store machine (/products).
+    - First, look for all the products in the store machine (/products) (Optionally select a currency).
      curl localhost:9000/products
+     curl localhost:9000/products?currency=USD
+
 
     - Second, select the product you want to order (/products/reserve) (Optionally select a currency).
       This will give you a requestId that you have to use to pay the product.
