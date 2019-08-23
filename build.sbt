@@ -1,8 +1,8 @@
-name := "SuperStore"
+name := "PlayStore"
  
 version := "1.0" 
       
-lazy val `superstore` = (project in file(".")).enablePlugins(PlayScala)
+lazy val `playstore` = (project in file(".")).enablePlugins(PlayScala)
 
 resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
       
